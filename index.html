@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RL-BESS Scenario Explorer</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f7f4;color:#2c2c2a;padding:24px;max-width:900px;margin:0 auto}
+  h1{font-size:20px;font-weight:500;margin-bottom:4px}
+  .subtitle{font-size:13px;color:#73726c;margin-bottom:20px}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center}
+  .filter-label{font-size:12px;color:#73726c}
+  .chip{font-size:12px;padding:4px 12px;border-radius:999px;border:1px solid #ccc;cursor:pointer;color:#73726c;background:transparent;transition:.15s}
+  .chip.active{background:#2c2c2a;color:#f8f7f4;border-color:transparent}
+  .metric-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .mtab{font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #ddd;cursor:pointer;color:#73726c;background:transparent}
+  .mtab.active{border-color:#2c2c2a;color:#2c2c2a;font-weight:500}
+  .grid-wrap{overflow-x:auto;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e5e4df}
+  th{font-weight:500;font-size:12px;color:#73726c;padding:8px 10px;text-align:center;border-bottom:1px solid #e5e4df;background:#faf9f6}
+  th.row-head{text-align:left}
+  td{padding:6px 8px;text-align:center;border-bottom:1px solid #f0efe9}
+  td.row-head{text-align:left;font-size:12px;color:#73726c;white-space:nowrap;padding-left:16px}
+  .cell{border-radius:6px;padding:5px 8px;font-weight:500;font-size:13px;display:inline-block;min-width:62px;cursor:pointer;transition:.1s;border:2px solid transparent}
+  .cell:hover{filter:brightness(.92)}
+  .cell.selected{border:2px solid #2c2c2a!important}
+  .legend{display:flex;gap:12px;margin-bottom:16px;font-size:12px;color:#73726c;align-items:center;flex-wrap:wrap}
+  .legend-bar{display:flex;gap:2px;align-items:center}
+  .legend-swatch{width:18px;height:11px;border-radius:2px}
+  .detail-panel{padding:14px 16px;border:1px solid #e5e4df;border-radius:10px;background:#fff;display:none;margin-bottom:16px}
+  .detail-panel.show{display:block}
+  .detail-panel h3{font-size:14px;font-weight:500;margin-bottom:12px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+  .kpi{background:#f8f7f4;border-radius:8px;padding:10px}
+  .kpi-label{font-size:11px;color:#73726c;margin-bottom:4px}
+  .kpi-val{font-size:18px;font-weight:500}
+  .kpi-unit{font-size:11px;color:#73726c;margin-left:2px}
+  .warn{font-size:12px;color:#73726c;font-style:italic;margin-top:10px}
+  .group-row td{font-size:12px;font-weight:500;color:#73726c;padding:10px 10px 4px;background:#f5f4f0}
+  .footer{margin-top:24px;font-size:11px;color:#9c9a92;text-align:center;border-top:1px solid #e5e4df;padding-top:12px}
+</style>
+</head>
+<body>
+
+<h1>RL-BESS Scenario Explorer</h1>
+<p class="subtitle">300k training steps · 4-person household · 3 / 5 / 15 kWp PV · 2-month training episodes · 1-day test episodes</p>
+
+<div class="filters">
+  <span class="filter-label">Train season:</span>
+  <button class="chip active" data-filter="train" data-val="all">All</button>
+  <button class="chip" data-filter="train" data-val="winter">❄️ Winter (Jan–Feb)</button>
+  <button class="chip" data-filter="train" data-val="summer">🔥 Summer (Jul–Aug)</button>
+  <span class="filter-label" style="margin-left:8px">Test season:</span>
+  <button class="chip active" data-filter="test" data-val="all">All</button>
+  <button class="chip" data-filter="test" data-val="winter">❄️ Winter (15 Dec)</button>
+  <button class="chip" data-filter="test" data-val="summer">🔥 Summer (15 Aug)</button>
+  <span class="filter-label" style="margin-left:8px">Battery:</span>
+  <button class="chip active" data-filter="batt" data-val="all">All</button>
+  <button class="chip" data-filter="batt" data-val="5">🔋 5 kWh</button>
+  <button class="chip" data-filter="batt" data-val="15">🔋 15 kWh</button>
+  <button class="chip" data-filter="batt" data-val="20">🔋 20 kWh</button>
+  <span class="filter-label" style="margin-left:8px">PV size:</span>
+  <button class="chip active" data-filter="pv" data-val="all">All</button>
+  <button class="chip" data-filter="pv" data-val="3">☀️ 3 kWp</button>
+  <button class="chip" data-filter="pv" data-val="5">☀️ 5 kWp</button>
+  <button class="chip" data-filter="pv" data-val="15">☀️ 15 kWp</button>
+
+
+</div>
+
+<div class="metric-tabs" id="metric-tabs">
+  <button class="mtab active" data-metric="selfSufficiency">Self-sufficiency %</button>
+  <button class="mtab" data-metric="selfConsumption">Self-consumption %</button>
+  <button class="mtab" data-metric="cost">Cost (€)</button>
+  <button class="mtab" data-metric="gridImports">Grid imports (kWh)</button>
+  <button class="mtab" data-metric="pvUsed">PV used (kWh)</button>
+</div>
+
+<div class="detail-panel" id="detail-panel">
+  <h3 id="detail-title"></h3>
+  <div class="kpi-grid" id="detail-kpis"></div>
+  <p class="warn" id="detail-note"></p>
+</div>
+
+<div class="grid-wrap" id="grid-wrap"></div>
+
+<div class="legend">
+  <span>Scale:</span>
+  <div class="legend-bar" id="legend-bar"></div>
+  <span id="legend-label"></span>
+</div>
+
+
+<div class="compare-panel" style="margin-top:18px;padding:14px 16px;border:1px solid #e5e4df;border-radius:10px;background:#fff;">
+  <h3 style="font-size:14px;font-weight:500;margin-bottom:10px">Scenario comparison</h3>
+  <div style="margin-bottom:8px;font-size:12px;color:#73726c">
+    Click cells in the table to add/remove scenarios from the comparison chart.
+  </div>
+  <canvas id="compareChart" height="120"></canvas>
+  <button onclick="clearComparison()" style="margin-top:10px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:white;cursor:pointer">
+    Clear comparison
+  </button>
+</div>
+
+<div class="footer">Master's thesis research data · RL-based BESS energy management · Interactive appendix</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const data=[
+  {id:'m',pv:5,batt:5,trainS:'winter',testS:'winter',load:13.89,pvGen:7.21,pvUsed:7.21,gridImp:6.94,cost:.23,sc:100,ss:50.08},
+  {id:'n',pv:5,batt:15,trainS:'winter',testS:'winter',load:13.89,pvGen:7.21,pvUsed:7.17,gridImp:6.97,cost:.23,sc:99.44,ss:49.8},
+  {id:'o',pv:5,batt:20,trainS:'winter',testS:'winter',load:13.89,pvGen:7.21,pvUsed:7.22,gridImp:6.93,cost:.23,sc:100,ss:50.09},
+  {id:'p',pv:5,batt:5,trainS:'winter',testS:'summer',load:8.07,pvGen:19.13,pvUsed:9.95,gridImp:.55,cost:.06,sc:53.06,ss:93.16},
+  {id:'q',pv:5,batt:15,trainS:'winter',testS:'summer',load:8.07,pvGen:19.13,pvUsed:18.96,gridImp:.55,cost:.06,sc:99.13,ss:93.16},
+  {id:'r',pv:5,batt:20,trainS:'winter',testS:'summer',load:8.07,pvGen:19.13,pvUsed:15.96,gridImp:.55,cost:.06,sc:83.41,ss:93.16},
+  {id:'s',pv:5,batt:5,trainS:'summer',testS:'winter',load:13.89,pvGen:7.21,pvUsed:4.48,gridImp:9.41,cost:.34,sc:62.06,ss:32.23},
+  {id:'t',pv:5,batt:15,trainS:'summer',testS:'winter',load:13.89,pvGen:7.21,pvUsed:6.31,gridImp:7.75,cost:.26,sc:87.45,ss:44.19},
+  {id:'u',pv:5,batt:20,trainS:'summer',testS:'winter',load:13.89,pvGen:7.21,pvUsed:5.86,gridImp:8.16,cost:.28,sc:81.17,ss:41.24},
+  {id:'v',pv:5,batt:5,trainS:'summer',testS:'summer',load:8.07,pvGen:19.13,pvUsed:9.95,gridImp:.55,cost:.06,sc:52.01,ss:93.16},
+  {id:'w',pv:5,batt:15,trainS:'summer',testS:'summer',load:8.07,pvGen:19.13,pvUsed:7.5,gridImp:.84,cost:.09,sc:39.22,ss:89.6},
+  {id:'x',pv:5,batt:20,trainS:'summer',testS:'summer',load:8.07,pvGen:19.13,pvUsed:7.48,gridImp:.86,cost:.09,sc:39.1,ss:89.33},
+  {id:'y',pv:3,batt:5,trainS:'winter',testS:'winter',load:13.89,pvGen:4.33,pvUsed:3.98,gridImp:9.91,cost:.36,sc:91.94,ss:28.65},
+  {id:'z',pv:3,batt:15,trainS:'winter',testS:'winter',load:13.89,pvGen:4.33,pvUsed:4.33,gridImp:9.6,cost:.35,sc:100,ss:30.39},
+  {id:'a1',pv:3,batt:20,trainS:'winter',testS:'winter',load:13.89,pvGen:4.33,pvUsed:4.33,gridImp:9.6,cost:.35,sc:100,ss:30.93},
+  {id:'b1',pv:3,batt:5,trainS:'winter',testS:'summer',load:8.07,pvGen:11.48,pvUsed:9.83,gridImp:.62,cost:.06,sc:85.64,ss:92.3},
+  {id:'c1',pv:3,batt:15,trainS:'winter',testS:'summer',load:8.07,pvGen:11.48,pvUsed:10.55,gridImp:1.04,cost:.12,sc:91.95,ss:87.05},
+  {id:'d1',pv:3,batt:20,trainS:'winter',testS:'summer',load:8.07,pvGen:11.48,pvUsed:10.55,gridImp:1.04,cost:.12,sc:91.95,ss:87.05},
+  {id:'e1',pv:3,batt:5,trainS:'summer',testS:'winter',load:13.89,pvGen:4.33,pvUsed:3.98,gridImp:9.91,cost:.36,sc:91.94,ss:28.65},
+  {id:'f1',pv:3,batt:15,trainS:'summer',testS:'winter',load:13.89,pvGen:4.33,pvUsed:4.33,gridImp:9.6,cost:.35,sc:100,ss:30.92},
+  {id:'g1',pv:3,batt:20,trainS:'summer',testS:'winter',load:13.89,pvGen:4.33,pvUsed:4.33,gridImp:9.59,cost:.35,sc:100,ss:30.96},
+  {id:'h1',pv:3,batt:5,trainS:'summer',testS:'summer',load:8.07,pvGen:11.48,pvUsed:9.83,gridImp:1.07,cost:.11,sc:85.64,ss:86.74},
+  {id:'i1',pv:3,batt:15,trainS:'summer',testS:'summer',load:8.07,pvGen:11.48,pvUsed:11.07,gridImp:.65,cost:.07,sc:96.47,ss:91.95},
+  {id:'j1',pv:3,batt:20,trainS:'summer',testS:'summer',load:8.07,pvGen:11.48,pvUsed:7.01,gridImp:1.29,cost:.14,sc:61.1,ss:84.02},
+  {id:'k1',pv:15,batt:5,trainS:'winter',testS:'winter',load:13.89,pvGen:21.64,pvUsed:10.31,gridImp:4.09,cost:.14,sc:47.61,ss:70.57},
+  {id:'l1',pv:15,batt:15,trainS:'winter',testS:'winter',load:13.89,pvGen:21.64,pvUsed:20.83,gridImp:1.89,cost:.11,sc:96.24,ss:86.39},
+  {id:'m1',pv:15,batt:20,trainS:'winter',testS:'winter',load:13.89,pvGen:21.64,pvUsed:20.69,gridImp:1.89,cost:.11,sc:95.59,ss:86.39},
+  {id:'n1',pv:15,batt:5,trainS:'winter',testS:'summer',load:8.07,pvGen:57.39,pvUsed:10.12,gridImp:.52,cost:.05,sc:17.63,ss:93.51},
+  {id:'o1',pv:15,batt:15,trainS:'winter',testS:'summer',load:8.07,pvGen:57.39,pvUsed:20.64,gridImp:.52,cost:.05,sc:35.97,ss:93.51},
+  {id:'p1',pv:15,batt:20,trainS:'winter',testS:'summer',load:8.07,pvGen:57.39,pvUsed:25.91,gridImp:.52,cost:.05,sc:45.14,ss:93.51},
+  {id:'q1',pv:15,batt:5,trainS:'summer',testS:'winter',load:13.89,pvGen:21.64,pvUsed:10.31,gridImp:8.85,cost:.31,sc:47.61,ss:36.3},
+  {id:'r1',pv:15,batt:15,trainS:'summer',testS:'winter',load:13.89,pvGen:21.64,pvUsed:17.01,gridImp:4.46,cost:.19,sc:78.6,ss:67.86},
+  {id:'s1',pv:15,batt:20,trainS:'summer',testS:'winter',load:13.89,pvGen:21.64,pvUsed:21.09,gridImp:6.16,cost:.22,sc:97.42,ss:55.62},
+  {id:'t1',pv:15,batt:5,trainS:'summer',testS:'summer',load:8.07,pvGen:57.39,pvUsed:10.12,gridImp:.52,cost:.05,sc:17.63,ss:93.51},
+  {id:'u1',pv:15,batt:15,trainS:'summer',testS:'summer',load:8.07,pvGen:57.39,pvUsed:6.65,gridImp:1.59,cost:.19,sc:11.58,ss:80.25},
+  {id:'v1',pv:15,batt:20,trainS:'summer',testS:'summer',load:8.07,pvGen:57.39,pvUsed:16.57,gridImp:.52,cost:.05,sc:28.87,ss:93.51},
+];
+
+const metrics={
+  selfSufficiency:{label:'Self-sufficiency %',higherBetter:true,fmt:v=>v.toFixed(1)+'%'},
+  selfConsumption:{label:'Self-consumption %',higherBetter:true,fmt:v=>v.toFixed(1)+'%'},
+  cost:{label:'Cost (€)',higherBetter:false,fmt:v=>'€'+v.toFixed(2)},
+  gridImports:{label:'Grid imports (kWh)',higherBetter:false,fmt:v=>v.toFixed(2)+' kWh'},
+  pvUsed:{label:'PV used (kWh)',higherBetter:true,fmt:v=>v.toFixed(2)+' kWh'},
+};
+const metricKey={selfSufficiency:'ss',selfConsumption:'sc',cost:'cost',gridImports:'gridImp',pvUsed:'pvUsed'};
+
+let filterTrain='all',filterTest='all',filterBatt='all',filterPv='all',activeMet='selfSufficiency',selectedId=null;
+let compareIds=[];
+let chart=null;
+const allPvSizes=[3,5,15];
+const allBattSizes=[5,15,20];
+const trainSeasons=['winter','summer'],testSeasons=['winter','summer'];
+const seasonEmoji={winter:'❄️',summer:'🔥'};
+
+function colorForValue(v,minV,maxV,higherBetter){
+  let t=(v-minV)/(maxV-minV||1);
+  if(!higherBetter)t=1-t;
+  t=Math.max(0,Math.min(1,t));
+  const stops=[[252,235,235],[240,148,148],[229,62,62],[255,245,225],[250,199,117],[239,159,39],[234,243,222],[192,221,151],[99,153,34]];
+  const i=Math.min(8,Math.floor(t*9));
+  return `rgb(${stops[i].join(',')})`;
+}
+function textColor(bg){
+  const m=bg.match(/\d+/g).map(Number);
+  return (0.299*m[0]+0.587*m[1]+0.114*m[2])/255>.5?'#2c2c2a':'#f8f7f4';
+}
+
+function render(){
+  const battSizes = filterBatt==='all' ? allBattSizes : allBattSizes.filter(b=>b==filterBatt);
+  const pvSizes = filterPv==='all' ? allPvSizes : allPvSizes.filter(p=>p==filterPv);
+  const mk=metricKey[activeMet];
+  const m=metrics[activeMet];
+  const filtered=data.filter(d=>(filterTrain==='all'||d.trainS===filterTrain)&&(filterTest==='all'||d.testS===filterTest));
+  const vals=filtered.map(d=>d[mk]);
+  const minV=Math.min(...vals),maxV=Math.max(...vals);
+
+  const allCombos=[];
+  for(const tr of trainSeasons)for(const te of testSeasons){
+    if((filterTrain==='all'||filterTrain===tr)&&(filterTest==='all'||filterTest===te))allCombos.push([tr,te]);
+  }
+
+  let html=`<table><thead><tr><th class="row-head">Configuration</th>`;
+  for(const b of battSizes)html+=`<th>🔋 ${b} kWh battery</th>`;
+  html+=`</tr></thead><tbody>`;
+
+  for(const [tr,te] of allCombos){
+    html+=`<tr class="group-row"><td colspan="${1+battSizes.length}">${seasonEmoji[tr]} Trained: ${tr.charAt(0).toUpperCase()+tr.slice(1)} &nbsp;→&nbsp; ${seasonEmoji[te]} Tested: ${te.charAt(0).toUpperCase()+te.slice(1)}</td></tr>`;
+    for(const pv of pvSizes){
+      html+=`<tr><td class="row-head">☀️ ${pv} kWp PV</td>`;
+      for(const b of battSizes){
+        const d=data.find(x=>x.pv===pv&&x.batt===b&&x.trainS===tr&&x.testS===te);
+        if(!d){html+=`<td>—</td>`;continue;}
+        const v=d[mk];
+        const bg=colorForValue(v,minV,maxV,m.higherBetter);
+        const tc=textColor(bg);
+        const sel=selectedId===d.id?' selected':'';
+        html+=`<td><span class="cell${sel}" style="background:${bg};color:${tc}" onclick="selectScenario('${d.id}')" title="Scenario ${d.id.toUpperCase()}">${m.fmt(v)}</span></td>`;
+      }
+      html+='</tr>';
+    }
+  }
+  html+='</tbody></table>';
+  document.getElementById('grid-wrap').innerHTML=html;
+
+  let lhtml='';
+  for(let i=0;i<9;i++){
+    const bg=colorForValue(minV+(i/8)*(maxV-minV),minV,maxV,m.higherBetter);
+    lhtml+=`<div class="legend-swatch" style="background:${bg}"></div>`;
+  }
+  lhtml+=` <span style="margin-left:4px">${m.fmt(minV)} → ${m.fmt(maxV)}</span>`;
+  document.getElementById('legend-bar').innerHTML=lhtml;
+  document.getElementById('legend-label').textContent=`(green = better performance)`;
+
+  if(selectedId){
+    const d=data.find(x=>x.id===selectedId);
+    if(d){
+      document.getElementById('detail-panel').className='detail-panel show';
+      document.getElementById('detail-title').textContent=`Scenario ${d.id.toUpperCase()} · ${d.pv} kWp · ${d.batt} kWh · ${seasonEmoji[d.trainS]} ${d.trainS} training → ${seasonEmoji[d.testS]} ${d.testS} testing`;
+      const kpis=[
+        {l:'Total load',v:d.load.toFixed(2),u:'kWh'},{l:'PV generated',v:d.pvGen.toFixed(2),u:'kWh'},
+        {l:'PV used',v:d.pvUsed.toFixed(2),u:'kWh'},{l:'Grid imports',v:d.gridImp.toFixed(2),u:'kWh'},
+        {l:'Cost',v:'€'+d.cost.toFixed(2),u:''},{l:'Self-consumption',v:d.sc.toFixed(1),u:'%'},{l:'Self-sufficiency',v:d.ss.toFixed(1),u:'%'},
+      ];
+      document.getElementById('detail-kpis').innerHTML=kpis.map(k=>`<div class="kpi"><div class="kpi-label">${k.l}</div><div class="kpi-val">${k.v}<span class="kpi-unit">${k.u}</span></div></div>`).join('');
+      document.getElementById('detail-note').textContent=d.trainS!==d.testS?'⚠️ Season mismatch: agent trained in one climate, tested in another.':'✓ Matched training and testing seasons.';
+    }
+  } else {
+    document.getElementById('detail-panel').className='detail-panel';
+  }
+}
+
+window.selectScenario=function(id){
+  selectedId = selectedId===id ? null : id;
+
+  if(!compareIds.includes(id)){
+    compareIds.push(id);
+  }else{
+    compareIds = compareIds.filter(x=>x!==id);
+  }
+
+  render();
+  renderChart();
+};
+
+document.querySelectorAll('.chip[data-filter]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const f=btn.dataset.filter;
+    document.querySelectorAll(`.chip[data-filter="${f}"]`).forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(f==='train') filterTrain=btn.dataset.val;
+    else if(f==='test') filterTest=btn.dataset.val;
+    else if(f==='batt') filterBatt=btn.dataset.val;
+    else if(f==='pv') filterPv=btn.dataset.val;
+    selectedId=null;render();
+  });
+});
+document.querySelectorAll('.mtab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeMet=btn.dataset.metric;
+    selectedId=null;render();
+  });
+});
+
+function renderChart(){
+
+  const scenarios=data.filter(d=>compareIds.includes(d.id));
+  if(!scenarios.length) return;
+
+  const labels=scenarios.map(d =>
+    `${d.pv}kWp / ${d.batt}kWh / ${d.trainS}→${d.testS}`
+  );
+
+  const values=scenarios.map(d => d[metricKey[activeMet]]);
+
+  const ctx=document.getElementById('compareChart').getContext('2d');
+
+  if(chart) chart.destroy();
+
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:labels,
+      datasets:[{
+        label:metrics[activeMet].label,
+        data:values
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true}}
+    }
+  });
+}
+
+function clearComparison(){
+  compareIds=[];
+  if(chart) chart.destroy();
+}
+
+render();
+</script>
+</body>
+</html>
