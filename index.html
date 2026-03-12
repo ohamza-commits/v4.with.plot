@@ -89,6 +89,71 @@ td.plot-cell { vertical-align:middle; }
 .compare-chip { font-size:11px; padding:4px 10px; border-radius:20px; display:flex; align-items:center; gap:5px; cursor:pointer; border:1.5px solid; transition:all .15s; }
 .compare-chip:hover { opacity:.75; }
 .chart-actions { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+
+/* ── floating button ── */
+#fab {
+  position: fixed; bottom: 32px; right: 32px; z-index: 200;
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 20px; border-radius: 50px;
+  background: var(--text-pri); color: white;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
+  transition: all .2s ease; user-select: none;
+  letter-spacing: -0.01em;
+}
+#fab:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.22); }
+#fab:active { transform: translateY(0); }
+.fab-count {
+  background: var(--accent); color: white;
+  font-size: 10px; font-weight: 700;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* ── modal overlay ── */
+#plot-overlay {
+  position: fixed; inset: 0; z-index: 300;
+  background: rgba(0,0,0,0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: none; align-items: center; justify-content: center;
+  padding: 24px;
+  animation: overlayIn .2s ease;
+}
+#plot-overlay.open { display: flex; }
+@keyframes overlayIn { from{opacity:0} to{opacity:1} }
+
+#plot-modal {
+  background: rgba(250,250,252,0.97);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  width: 100%; max-width: 780px;
+  padding: 24px 28px 28px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.16), 0 4px 16px rgba(0,0,0,0.08);
+  animation: modalIn .22s cubic-bezier(.32,.72,0,1);
+}
+@keyframes modalIn { from{transform:scale(0.96) translateY(8px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+
+#plot-modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 16px;
+}
+#plot-modal-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-pri); }
+#plot-modal-sub { font-size: 12px; color: var(--text-sec); margin-top: 3px; }
+
+#plot-close {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(0,0,0,0.07); color: var(--text-sec);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; cursor: pointer; transition: all .15s;
+  flex-shrink: 0;
+}
+#plot-close:hover { background: rgba(0,0,0,0.12); color: var(--text-pri); }
+
+#plot-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; min-height: 0; }
+#plot-empty { text-align: center; padding: 40px; color: var(--text-ter); font-size: 13px; }
+#plot-chart-wrap { position: relative; }
 </style>
 </head>
 <body>
@@ -163,23 +228,34 @@ td.plot-cell { vertical-align:middle; }
     </div>
   </div>
 
-  <!-- Chart -->
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">Comparison plot — battery size vs <span id="chart-metric-label">Self-sufficiency %</span></span>
-      <button class="btn-clear" onclick="clearPlot()">Clear all</button>
-    </div>
-    <div class="compare-wrap">
-      <div id="compare-empty" class="compare-empty">Toggle the 📈 button on any row to add it to the plot</div>
-      <div id="compare-content" style="display:none">
-        <div class="compare-chips" id="compare-chips"></div>
-        <div class="chart-container">
-          <canvas id="compareChart" height="85"></canvas>
-        </div>
+</div>
+
+<!-- Floating plot button -->
+<div id="fab" onclick="openPlot()" title="Open comparison plot">
+  <span id="fab-icon">📈</span>
+  <span id="fab-label">Plot</span>
+  <span id="fab-count" class="fab-count" style="display:none">0</span>
+</div>
+
+<!-- Plot modal overlay -->
+<div id="plot-overlay" onclick="handleOverlayClick(event)">
+  <div id="plot-modal">
+    <div id="plot-modal-header">
+      <div>
+        <div id="plot-modal-title">Comparison plot</div>
+        <div id="plot-modal-sub">Battery size vs <span id="chart-metric-label">Self-sufficiency</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="btn-clear" onclick="clearPlot()">Clear all</button>
+        <div id="plot-close" onclick="closePlot()">✕</div>
       </div>
     </div>
+    <div id="plot-chips"></div>
+    <div id="plot-empty">Add rows using the Plot column in the table</div>
+    <div id="plot-chart-wrap" style="display:none">
+      <canvas id="compareChart" height="75"></canvas>
+    </div>
   </div>
-
 </div>
 
 <script>
@@ -331,12 +407,15 @@ function render(){
   document.getElementById('chart-metric-label').textContent=m.label;
 
   renderDetail();
-  renderChart();
+  updateFab();
 }
 
 window.toggleGroup=function(key){
   if(plottedGroupKeys.has(key)) plottedGroupKeys.delete(key);
   else plottedGroupKeys.add(key);
+  updateFab();
+  // if modal open, refresh chart live
+  if(document.getElementById('plot-overlay').classList.contains('open')) renderChart();
   render();
 };
 
@@ -371,55 +450,92 @@ function renderDetail(){
     <div class="kpi-val">${k.v}<span class="kpi-unit">${k.u}</span></div></div>`).join('');
 }
 
-function renderChart(){
-  const empty=document.getElementById('compare-empty');
-  const content=document.getElementById('compare-content');
-  if(!plottedGroupKeys.size){empty.style.display='block';content.style.display='none';if(chart){chart.destroy();chart=null;}return;}
-  empty.style.display='none';content.style.display='block';
+function updateFab() {
+  const n = plottedGroupKeys.size;
+  const fab = document.getElementById('fab');
+  const count = document.getElementById('fab-count');
+  if (n > 0) {
+    count.textContent = n;
+    count.style.display = 'inline-flex';
+    fab.style.background = 'var(--text-pri)';
+  } else {
+    count.style.display = 'none';
+  }
+}
 
-  const m=metrics[activeMet], mk=m.key;
-  const battLabels=[5,15,20];
+window.openPlot = function() {
+  document.getElementById('plot-overlay').classList.add('open');
+  renderChart();
+};
 
-  const datasets=[...plottedGroupKeys].map(key=>{
-    const [pv,tr,te]=key.split(':');
-    const color=groupColor(key);
-    const points=battLabels.map(b=>{
-      const found=data.find(d=>d.pv==pv&&d.batt===b&&d.trainS===tr&&d.testS===te);
-      return found?found[mk]:null;
-    });
-    return{label:groupLabel(key),data:points,borderColor:color,backgroundColor:color+'22',
-      pointBackgroundColor:color,pointRadius:6,pointHoverRadius:9,borderWidth:2.5,tension:0.3,spanGaps:false};
-  });
+window.closePlot = function() {
+  document.getElementById('plot-overlay').classList.remove('open');
+};
 
-  // chips — one per plotted group
-  document.getElementById('compare-chips').innerHTML=[...plottedGroupKeys].map(key=>{
-    const color=groupColor(key);
-    return`<div class="compare-chip" style="background:${color}18;border-color:${color};color:${color}" onclick="toggleGroup('${key}')" title="Click to remove">
+window.handleOverlayClick = function(e) {
+  if (e.target === document.getElementById('plot-overlay')) closePlot();
+};
+
+window.clearPlot = function() {
+  plottedGroupKeys.clear(); selectedId = null;
+  render(); updateFab(); renderChart();
+};
+
+function renderChart() {
+  const empty = document.getElementById('plot-empty');
+  const wrap  = document.getElementById('plot-chart-wrap');
+  const m = metrics[activeMet], mk = m.key;
+  document.getElementById('chart-metric-label').textContent = m.label;
+
+  // chips
+  document.getElementById('plot-chips').innerHTML = [...plottedGroupKeys].map(key => {
+    const color = groupColor(key);
+    return `<div class="compare-chip" style="background:${color}18;border-color:${color};color:${color}" onclick="toggleGroup('${key}')" title="Click to remove">
       ${groupLabel(key)} <span style="font-size:13px;opacity:.7">×</span>
     </div>`;
   }).join('');
 
-  const ctx=document.getElementById('compareChart').getContext('2d');
-  if(chart)chart.destroy();
-  chart=new Chart(ctx,{
-    type:'line',
-    data:{labels:battLabels.map(b=>`${b} kWh`),datasets},
-    options:{
-      responsive:true,
-      interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{display:true,position:'top',labels:{font:{family:'DM Sans',size:11},color:'#6e6e73',boxWidth:12,padding:16}},
-        tooltip:{
-          callbacks:{label:item=>` ${item.dataset.label}: ${m.fmt(item.raw)}`},
-          backgroundColor:'rgba(255,255,255,0.97)',borderColor:'rgba(0,0,0,0.07)',borderWidth:1,
-          titleColor:'#1d1d1f',bodyColor:'#6e6e73',padding:10,cornerRadius:10,
+  if (!plottedGroupKeys.size) {
+    empty.style.display = 'block'; wrap.style.display = 'none';
+    if (chart) { chart.destroy(); chart = null; }
+    return;
+  }
+  empty.style.display = 'none'; wrap.style.display = 'block';
+
+  const battLabels = [5,15,20];
+  const datasets = [...plottedGroupKeys].map(key => {
+    const [pv,tr,te] = key.split(':');
+    const color = groupColor(key);
+    const points = battLabels.map(b => {
+      const found = data.find(d => d.pv==pv && d.batt===b && d.trainS===tr && d.testS===te);
+      return found ? found[mk] : null;
+    });
+    return { label:groupLabel(key), data:points, borderColor:color, backgroundColor:color+'22',
+      pointBackgroundColor:color, pointRadius:6, pointHoverRadius:9,
+      borderWidth:2.5, tension:0.3, spanGaps:false };
+  });
+
+  const ctx = document.getElementById('compareChart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: battLabels.map(b=>`${b} kWh`), datasets },
+    options: {
+      responsive: true,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display:true, position:'top', labels:{ font:{family:'DM Sans',size:11}, color:'#8e8e93', boxWidth:12, padding:16 } },
+        tooltip: {
+          callbacks: { label: item => ` ${item.dataset.label}: ${m.fmt(item.raw)}` },
+          backgroundColor:'rgba(255,255,255,0.97)', borderColor:'rgba(0,0,0,0.06)',
+          borderWidth:1, titleColor:'#3a3a3c', bodyColor:'#8e8e93', padding:10, cornerRadius:10,
         }
       },
-      scales:{
-        x:{title:{display:true,text:'Battery capacity',font:{family:'DM Sans',size:11},color:'#aeaeb2'},
-          grid:{display:false},ticks:{font:{family:'DM Sans',size:12},color:'#6e6e73'}},
-        y:{title:{display:true,text:m.label+' ('+m.unit+')',font:{family:'DM Sans',size:11},color:'#aeaeb2'},
-          grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:'DM Sans',size:11},color:'#6e6e73',callback:v=>m.fmt(v)}}
+      scales: {
+        x: { title:{display:true,text:'Battery capacity',font:{family:'DM Sans',size:11},color:'#c7c7cc'},
+          grid:{display:false}, ticks:{font:{family:'DM Sans',size:12},color:'#8e8e93'} },
+        y: { title:{display:true,text:`${m.label} (${m.unit})`,font:{family:'DM Sans',size:11},color:'#c7c7cc'},
+          grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{family:'DM Sans',size:11},color:'#8e8e93',callback:v=>m.fmt(v)} }
       }
     }
   });
@@ -450,4 +566,5 @@ render();
 </script>
 </body>
 </html>
+
 
