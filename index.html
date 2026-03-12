@@ -4,108 +4,184 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RL-BESS Scenario Explorer</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8f7f4;color:#2c2c2a;padding:24px;max-width:900px;margin:0 auto}
-  h1{font-size:20px;font-weight:500;margin-bottom:4px}
-  .subtitle{font-size:13px;color:#73726c;margin-bottom:20px}
-  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center}
-  .filter-label{font-size:12px;color:#73726c}
-  .chip{font-size:12px;padding:4px 12px;border-radius:999px;border:1px solid #ccc;cursor:pointer;color:#73726c;background:transparent;transition:.15s}
-  .chip.active{background:#2c2c2a;color:#f8f7f4;border-color:transparent}
-  .metric-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-  .mtab{font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid #ddd;cursor:pointer;color:#73726c;background:transparent}
-  .mtab.active{border-color:#2c2c2a;color:#2c2c2a;font-weight:500}
-  .grid-wrap{overflow-x:auto;margin-bottom:12px}
-  table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e5e4df}
-  th{font-weight:500;font-size:12px;color:#73726c;padding:8px 10px;text-align:center;border-bottom:1px solid #e5e4df;background:#faf9f6}
-  th.row-head{text-align:left}
-  td{padding:6px 8px;text-align:center;border-bottom:1px solid #f0efe9}
-  td.row-head{text-align:left;font-size:12px;color:#73726c;white-space:nowrap;padding-left:16px}
-  .cell{border-radius:6px;padding:5px 8px;font-weight:500;font-size:13px;display:inline-block;min-width:62px;cursor:pointer;transition:.1s;border:2px solid transparent}
-  .cell:hover{filter:brightness(.92)}
-  .cell.selected{border:2px solid #2c2c2a!important}
-  .legend{display:flex;gap:12px;margin-bottom:16px;font-size:12px;color:#73726c;align-items:center;flex-wrap:wrap}
-  .legend-bar{display:flex;gap:2px;align-items:center}
-  .legend-swatch{width:18px;height:11px;border-radius:2px}
-  .detail-panel{padding:14px 16px;border:1px solid #e5e4df;border-radius:10px;background:#fff;display:none;margin-bottom:16px}
-  .detail-panel.show{display:block}
-  .detail-panel h3{font-size:14px;font-weight:500;margin-bottom:12px}
-  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
-  .kpi{background:#f8f7f4;border-radius:8px;padding:10px}
-  .kpi-label{font-size:11px;color:#73726c;margin-bottom:4px}
-  .kpi-val{font-size:18px;font-weight:500}
-  .kpi-unit{font-size:11px;color:#73726c;margin-left:2px}
-  .warn{font-size:12px;color:#73726c;font-style:italic;margin-top:10px}
-  .group-row td{font-size:12px;font-weight:500;color:#73726c;padding:10px 10px 4px;background:#f5f4f0}
-  .footer{margin-top:24px;font-size:11px;color:#9c9a92;text-align:center;border-top:1px solid #e5e4df;padding-top:12px}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f2f2f4; --surface:rgba(255,255,255,0.72); --border:rgba(0,0,0,0.05);
+  --text-pri:#3a3a3c; --text-sec:#8e8e93; --text-ter:#c7c7cc;
+  --accent:#0071e3; --good:#34c759; --warn:#ff9f0a; --bad:#ff3b30; --radius:16px;
+}
+html,body { min-height:100%; font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif; background:var(--bg); color:var(--text-pri); -webkit-font-smoothing:antialiased; }
+
+header { position:sticky; top:0; z-index:50; backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); background:rgba(242,242,244,0.85); border-bottom:1px solid var(--border); padding:16px 28px; display:flex; align-items:center; justify-content:space-between; }
+.hdr-left h1 { font-size:17px; font-weight:600; letter-spacing:-0.02em; }
+.hdr-left p  { font-size:12px; color:var(--text-sec); margin-top:2px; }
+.hdr-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; font-size:11px; font-weight:500; background:rgba(0,113,227,0.1); color:var(--accent); }
+.hdr-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+.page { max-width:1200px; margin:0 auto; padding:20px 24px; display:flex; flex-direction:column; gap:16px; }
+
+.card { background:var(--surface); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 2px 12px rgba(0,0,0,0.05); }
+.card-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+.card-title { font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--text-ter); }
+.card-body { padding:16px 18px; }
+
+.filter-row { display:flex; flex-wrap:wrap; gap:16px; padding:14px 18px; align-items:center; }
+.filter-group { display:flex; align-items:center; gap:6px; }
+.filter-group-label { font-size:11px; font-weight:500; color:var(--text-sec); white-space:nowrap; }
+.chip { font-size:11px; font-weight:500; padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:white; color:var(--text-sec); cursor:pointer; transition:all .15s ease; user-select:none; }
+.chip:hover { border-color:var(--accent); color:var(--accent); }
+.chip.active { background:var(--text-pri); color:white; border-color:var(--text-pri); }
+
+.metric-tabs { display:flex; gap:4px; padding:10px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.mtab { font-size:12px; font-weight:500; padding:6px 14px; border-radius:8px; border:1px solid transparent; background:transparent; color:var(--text-sec); cursor:pointer; transition:all .15s ease; }
+.mtab:hover { background:rgba(0,0,0,0.04); }
+.mtab.active { background:white; color:var(--text-pri); border-color:var(--border); box-shadow:0 1px 4px rgba(0,0,0,0.08); }
+
+.grid-wrap { overflow-x:auto; padding:0 18px 18px; }
+table { width:100%; border-collapse:collapse; font-size:12px; }
+th { font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--text-sec); padding:8px 6px; text-align:center; white-space:nowrap; }
+th.row-head { text-align:left; }
+th.plot-head { color:var(--accent); width:54px; }
+td { padding:3px 4px; text-align:center; }
+td.row-head { text-align:left; font-size:11px; color:var(--text-sec); white-space:nowrap; padding-left:0; padding-right:10px; }
+td.plot-cell { vertical-align:middle; }
+.group-row td { font-size:11px; font-weight:600; color:var(--text-sec); padding:12px 6px 5px; letter-spacing:.02em; }
+
+.cell { border-radius:8px; padding:6px 4px; font-weight:600; font-size:12px; display:inline-flex; flex-direction:column; align-items:center; min-width:66px; cursor:default; transition:all .12s ease; border:2px solid transparent; line-height:1.3; }
+.cell-id { font-size:9px; font-weight:500; opacity:0.65; margin-top:1px; }
+
+/* ── plot toggle ── */
+.plot-toggle {
+  display: inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:8px;
+  border:1.5px solid var(--border); background:white;
+  cursor:pointer; transition:all .15s ease; color:var(--text-ter);
+  font-size:14px; user-select:none;
+}
+.plot-toggle:hover { border-color:var(--accent); color:var(--accent); background:rgba(0,113,227,0.06); }
+.plot-toggle.on { background:var(--accent); border-color:var(--accent); color:white; box-shadow:0 2px 8px rgba(0,113,227,0.35); }
+
+.legend-row { display:flex; align-items:center; gap:10px; padding:10px 18px; border-top:1px solid var(--border); font-size:11px; color:var(--text-sec); }
+.legend-gradient { width:120px; height:10px; border-radius:5px; background:linear-gradient(to right, rgb(235,100,100), rgb(235,170,120), rgb(120,195,130)); }
+.legend-labels { display:flex; justify-content:space-between; width:120px; font-size:10px; color:var(--text-ter); margin-top:2px; }
+
+.detail-panel { display:none; }
+.detail-panel.show { display:block; }
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; }
+.kpi { background:var(--bg); border-radius:12px; padding:12px 14px; border:1px solid var(--border); }
+.kpi-label { font-size:10px; font-weight:500; color:var(--text-sec); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+.kpi-val { font-size:22px; font-weight:600; letter-spacing:-0.02em; }
+.kpi-unit { font-size:12px; color:var(--text-sec); font-weight:400; margin-left:2px; }
+.season-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:500; }
+.match-badge { background:rgba(52,199,89,0.12); color:#1a7a34; }
+.mismatch-badge { background:rgba(255,159,10,0.12); color:#a05c00; }
+
+.compare-wrap { padding:18px; }
+.compare-empty { text-align:center; padding:40px; color:var(--text-ter); font-size:13px; }
+.chart-container { position:relative; }
+.btn-clear { font-size:11px; font-weight:500; padding:6px 14px; border-radius:8px; border:1px solid var(--border); background:white; color:var(--text-sec); cursor:pointer; transition:all .15s; }
+.btn-clear:hover { border-color:var(--bad); color:var(--bad); }
+.compare-chips { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.compare-chip { font-size:11px; padding:4px 10px; border-radius:20px; display:flex; align-items:center; gap:5px; cursor:pointer; border:1.5px solid; transition:all .15s; }
+.compare-chip:hover { opacity:.75; }
+.chart-actions { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 </style>
 </head>
 <body>
 
-<h1>RL-BESS Scenario Explorer</h1>
-<p class="subtitle">300k training steps · 4-person household · 3 / 5 / 15 kWp PV · 2-month training episodes · 1-day test episodes</p>
-
-<div class="filters">
-  <span class="filter-label">Train season:</span>
-  <button class="chip active" data-filter="train" data-val="all">All</button>
-  <button class="chip" data-filter="train" data-val="winter">❄️ Winter (Jan–Feb)</button>
-  <button class="chip" data-filter="train" data-val="summer">🔥 Summer (Jul–Aug)</button>
-  <span class="filter-label" style="margin-left:8px">Test season:</span>
-  <button class="chip active" data-filter="test" data-val="all">All</button>
-  <button class="chip" data-filter="test" data-val="winter">❄️ Winter (15 Dec)</button>
-  <button class="chip" data-filter="test" data-val="summer">🔥 Summer (15 Aug)</button>
-  <span class="filter-label" style="margin-left:8px">Battery:</span>
-  <button class="chip active" data-filter="batt" data-val="all">All</button>
-  <button class="chip" data-filter="batt" data-val="5">🔋 5 kWh</button>
-  <button class="chip" data-filter="batt" data-val="15">🔋 15 kWh</button>
-  <button class="chip" data-filter="batt" data-val="20">🔋 20 kWh</button>
-  <span class="filter-label" style="margin-left:8px">PV size:</span>
-  <button class="chip active" data-filter="pv" data-val="all">All</button>
-  <button class="chip" data-filter="pv" data-val="3">☀️ 3 kWp</button>
-  <button class="chip" data-filter="pv" data-val="5">☀️ 5 kWp</button>
-  <button class="chip" data-filter="pv" data-val="15">☀️ 15 kWp</button>
-
-
-</div>
-
-<div class="metric-tabs" id="metric-tabs">
-  <button class="mtab active" data-metric="selfSufficiency">Self-sufficiency %</button>
-  <button class="mtab" data-metric="selfConsumption">Self-consumption %</button>
-  <button class="mtab" data-metric="cost">Cost (€)</button>
-  <button class="mtab" data-metric="gridImports">Grid imports (kWh)</button>
-  <button class="mtab" data-metric="pvUsed">PV used (kWh)</button>
-</div>
-
-<div class="detail-panel" id="detail-panel">
-  <h3 id="detail-title"></h3>
-  <div class="kpi-grid" id="detail-kpis"></div>
-  <p class="warn" id="detail-note"></p>
-</div>
-
-<div class="grid-wrap" id="grid-wrap"></div>
-
-<div class="legend">
-  <span>Scale:</span>
-  <div class="legend-bar" id="legend-bar"></div>
-  <span id="legend-label"></span>
-</div>
-
-
-<div class="compare-panel" style="margin-top:18px;padding:14px 16px;border:1px solid #e5e4df;border-radius:10px;background:#fff;">
-  <h3 style="font-size:14px;font-weight:500;margin-bottom:10px">Scenario comparison</h3>
-  <div style="margin-bottom:8px;font-size:12px;color:#73726c">
-    Click cells in the table to add/remove scenarios from the comparison chart.
+<header>
+  <div class="hdr-left">
+    <h1>RL-BESS Scenario Explorer</h1>
+    <p>300k steps · 4-person household · 3 / 5 / 15 kWp PV · 2-month training · 1-day test</p>
   </div>
-  <canvas id="compareChart" height="120"></canvas>
-  <button onclick="clearComparison()" style="margin-top:10px;font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:white;cursor:pointer">
-    Clear comparison
-  </button>
+  <div class="hdr-badge"><div class="hdr-dot"></div>36 scenarios</div>
+</header>
+
+<div class="page">
+
+  <div class="card">
+    <div class="filter-row">
+      <div class="filter-group">
+        <span class="filter-group-label">Train season</span>
+        <button class="chip active" data-filter="train" data-val="all">All</button>
+        <button class="chip" data-filter="train" data-val="winter">❄️ Winter</button>
+        <button class="chip" data-filter="train" data-val="summer">☀️ Summer</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Test season</span>
+        <button class="chip active" data-filter="test" data-val="all">All</button>
+        <button class="chip" data-filter="test" data-val="winter">❄️ Winter</button>
+        <button class="chip" data-filter="test" data-val="summer">☀️ Summer</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Battery</span>
+        <button class="chip active" data-filter="batt" data-val="all">All</button>
+        <button class="chip" data-filter="batt" data-val="5">5 kWh</button>
+        <button class="chip" data-filter="batt" data-val="15">15 kWh</button>
+        <button class="chip" data-filter="batt" data-val="20">20 kWh</button>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">PV size</span>
+        <button class="chip active" data-filter="pv" data-val="all">All</button>
+        <button class="chip" data-filter="pv" data-val="3">3 kWp</button>
+        <button class="chip" data-filter="pv" data-val="5">5 kWp</button>
+        <button class="chip" data-filter="pv" data-val="15">15 kWp</button>
+      </div>
+    </div>
+
+    <div class="metric-tabs" id="metric-tabs">
+      <button class="mtab active" data-metric="selfSufficiency">Self-sufficiency %</button>
+      <button class="mtab" data-metric="selfConsumption">Self-consumption %</button>
+      <button class="mtab" data-metric="cost">Cost (€)</button>
+      <button class="mtab" data-metric="gridImports">Grid imports (kWh)</button>
+      <button class="mtab" data-metric="pvUsed">PV used (kWh)</button>
+    </div>
+
+    <div class="grid-wrap" id="grid-wrap"></div>
+
+    <div class="legend-row">
+      <div>
+        <div class="legend-gradient"></div>
+        <div class="legend-labels"><span>Worse</span><span>Better</span></div>
+      </div>
+      <span id="legend-range" style="font-size:11px;color:var(--text-ter)"></span>
+    </div>
+  </div>
+
+  <!-- Detail panel -->
+  <div class="card detail-panel" id="detail-panel">
+    <div class="card-header">
+      <span class="card-title">Scenario detail</span>
+      <div id="detail-badges" style="display:flex;gap:8px;align-items:center"></div>
+    </div>
+    <div class="card-body">
+      <div class="kpi-grid" id="detail-kpis"></div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Comparison plot — battery size vs <span id="chart-metric-label">Self-sufficiency %</span></span>
+      <button class="btn-clear" onclick="clearPlot()">Clear all</button>
+    </div>
+    <div class="compare-wrap">
+      <div id="compare-empty" class="compare-empty">Toggle the 📈 button on any row to add it to the plot</div>
+      <div id="compare-content" style="display:none">
+        <div class="compare-chips" id="compare-chips"></div>
+        <div class="chart-container">
+          <canvas id="compareChart" height="85"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<div class="footer">Master's thesis research data · RL-based BESS energy management · Interactive appendix</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const data=[
   {id:'m',pv:5,batt:5,trainS:'winter',testS:'winter',load:13.89,pvGen:7.21,pvUsed:7.21,gridImp:6.94,cost:.23,sc:100,ss:50.08},
@@ -146,122 +222,218 @@ const data=[
   {id:'v1',pv:15,batt:20,trainS:'summer',testS:'summer',load:8.07,pvGen:57.39,pvUsed:16.57,gridImp:.52,cost:.05,sc:28.87,ss:93.51},
 ];
 
-const metrics={
-  selfSufficiency:{label:'Self-sufficiency %',higherBetter:true,fmt:v=>v.toFixed(1)+'%'},
-  selfConsumption:{label:'Self-consumption %',higherBetter:true,fmt:v=>v.toFixed(1)+'%'},
-  cost:{label:'Cost (€)',higherBetter:false,fmt:v=>'€'+v.toFixed(2)},
-  gridImports:{label:'Grid imports (kWh)',higherBetter:false,fmt:v=>v.toFixed(2)+' kWh'},
-  pvUsed:{label:'PV used (kWh)',higherBetter:true,fmt:v=>v.toFixed(2)+' kWh'},
+const metrics = {
+  selfSufficiency:{ label:'Self-sufficiency', unit:'%',   higherBetter:true,  key:'ss',      fmt:v=>v.toFixed(1)+'%' },
+  selfConsumption:{ label:'Self-consumption', unit:'%',   higherBetter:true,  key:'sc',      fmt:v=>v.toFixed(1)+'%' },
+  cost:           { label:'Cost',             unit:'€',   higherBetter:false, key:'cost',    fmt:v=>'€'+v.toFixed(2) },
+  gridImports:    { label:'Grid imports',     unit:'kWh', higherBetter:false, key:'gridImp', fmt:v=>v.toFixed(2)+' kWh' },
+  pvUsed:         { label:'PV used',          unit:'kWh', higherBetter:true,  key:'pvUsed',  fmt:v=>v.toFixed(2)+' kWh' },
 };
-const metricKey={selfSufficiency:'ss',selfConsumption:'sc',cost:'cost',gridImports:'gridImp',pvUsed:'pvUsed'};
 
-let filterTrain='all',filterTest='all',filterBatt='all',filterPv='all',activeMet='selfSufficiency',selectedId=null;
-let compareIds=[];
-let chart=null;
-const allPvSizes=[3,5,15];
-const allBattSizes=[5,15,20];
-const trainSeasons=['winter','summer'],testSeasons=['winter','summer'];
-const seasonEmoji={winter:'❄️',summer:'🔥'};
+const allPv=[3,5,15], allBatt=[5,15,20], seasons=['winter','summer'];
+const sEmoji={winter:'❄️',summer:'☀️'};
+const sColor={winter:'rgba(0,122,255,0.1)',summer:'rgba(255,159,10,0.1)'};
+const sTColor={winter:'#007aff',summer:'#cc7a00'};
 
-function colorForValue(v,minV,maxV,higherBetter){
-  let t=(v-minV)/(maxV-minV||1);
-  if(!higherBetter)t=1-t;
+// A "plotted group" = one (pv, trainS, testS) combo — a line in the chart
+// key = "PV:trainS:testS"
+const palette=['#0071e3','#34c759','#ff9f0a','#ff3b30','#5e5ce6','#30b0c7','#ac39ff','#ff6b35'];
+let plottedGroupKeys = new Set(); // groups currently on the chart
+let colorMap = {}; // groupKey → color (stable)
+let colorIdx = 0;
+
+function groupKey(d) { return `${d.pv}:${d.trainS}:${d.testS}`; }
+function groupLabel(key) {
+  const [pv,tr,te] = key.split(':');
+  return `${pv} kWp · ${sEmoji[tr]} train → ${sEmoji[te]} test`;
+}
+function groupColor(key) {
+  if (!colorMap[key]) { colorMap[key] = palette[colorIdx++ % palette.length]; }
+  return colorMap[key];
+}
+
+let filterTrain='all', filterTest='all', filterBatt='all', filterPv='all';
+let activeMet='selfSufficiency', selectedId=null, chart=null;
+
+function heatColor(t, higherBetter) {
+  if (!higherBetter) t=1-t;
   t=Math.max(0,Math.min(1,t));
-  const stops=[[252,235,235],[240,148,148],[229,62,62],[255,245,225],[250,199,117],[239,159,39],[234,243,222],[192,221,151],[99,153,34]];
-  const i=Math.min(8,Math.floor(t*9));
-  return `rgb(${stops[i].join(',')})`;
+  // softer: muted red → soft amber → muted green
+  let r,g,b;
+  if(t<0.5){const s=t*2;r=235;g=Math.round(100+s*(170-100));b=Math.round(100+s*(120-100));}
+  else{const s=(t-.5)*2;r=Math.round(235+s*(120-235));g=Math.round(170+s*(195-170));b=Math.round(120+s*(130-120));}
+  return `rgb(${r},${g},${b})`;
 }
-function textColor(bg){
-  const m=bg.match(/\d+/g).map(Number);
-  return (0.299*m[0]+0.587*m[1]+0.114*m[2])/255>.5?'#2c2c2a':'#f8f7f4';
-}
+function textOnColor(c){const m=c.match(/\d+/g).map(Number);return(0.299*m[0]+0.587*m[1]+0.114*m[2])/255>.55?'#1d1d1f':'#fff';}
 
 function render(){
-  const battSizes = filterBatt==='all' ? allBattSizes : allBattSizes.filter(b=>b==filterBatt);
-  const pvSizes = filterPv==='all' ? allPvSizes : allPvSizes.filter(p=>p==filterPv);
-  const mk=metricKey[activeMet];
-  const m=metrics[activeMet];
+  const pvSizes  = filterPv  ==='all'?allPv  :allPv.filter(p=>p==filterPv);
+  const battSizes= filterBatt==='all'?allBatt:allBatt.filter(b=>b==filterBatt);
+  const m=metrics[activeMet], mk=m.key;
+
   const filtered=data.filter(d=>(filterTrain==='all'||d.trainS===filterTrain)&&(filterTest==='all'||d.testS===filterTest));
   const vals=filtered.map(d=>d[mk]);
-  const minV=Math.min(...vals),maxV=Math.max(...vals);
+  const minV=Math.min(...vals), maxV=Math.max(...vals);
 
-  const allCombos=[];
-  for(const tr of trainSeasons)for(const te of testSeasons){
-    if((filterTrain==='all'||filterTrain===tr)&&(filterTest==='all'||filterTest===te))allCombos.push([tr,te]);
+  const combos=[];
+  for(const tr of seasons)for(const te of seasons){
+    if((filterTrain==='all'||filterTrain===tr)&&(filterTest==='all'||filterTest===te))combos.push([tr,te]);
   }
 
-  let html=`<table><thead><tr><th class="row-head">Configuration</th>`;
-  for(const b of battSizes)html+=`<th>🔋 ${b} kWh battery</th>`;
+  // one "Plot" column header, then battery columns
+  let html=`<table><thead><tr>
+    <th class="row-head">Configuration</th>
+    <th class="plot-head" title="Toggle row in plot">Plot</th>`;
+  for(const b of battSizes) html+=`<th>🔋 ${b} kWh</th>`;
   html+=`</tr></thead><tbody>`;
 
-  for(const [tr,te] of allCombos){
-    html+=`<tr class="group-row"><td colspan="${1+battSizes.length}">${seasonEmoji[tr]} Trained: ${tr.charAt(0).toUpperCase()+tr.slice(1)} &nbsp;→&nbsp; ${seasonEmoji[te]} Tested: ${te.charAt(0).toUpperCase()+te.slice(1)}</td></tr>`;
+  for(const [tr,te] of combos){
+    const matched=tr===te;
+    html+=`<tr class="group-row"><td colspan="${2+battSizes.length}" style="padding-left:0">
+      <span style="padding:3px 8px;border-radius:6px;background:${sColor[tr]};color:${sTColor[tr]};margin-right:6px">${sEmoji[tr]} Trained: ${tr}</span>
+      <span style="color:#aeaeb2;margin-right:6px">→</span>
+      <span style="padding:3px 8px;border-radius:6px;background:${sColor[te]};color:${sTColor[te]};margin-right:8px">${sEmoji[te]} Tested: ${te}</span>
+      ${matched?'<span style="font-size:10px;color:#34c759">✓ matched</span>':'<span style="font-size:10px;color:#ff9f0a">⚠ mismatch</span>'}
+    </td></tr>`;
+
     for(const pv of pvSizes){
-      html+=`<tr><td class="row-head">☀️ ${pv} kWp PV</td>`;
+      const rowKey=`${pv}:${tr}:${te}`;
+      const isOn=plottedGroupKeys.has(rowKey);
+      const btnColor=isOn?groupColor(rowKey):'';
+      html+=`<tr>
+        <td class="row-head">☀️ ${pv} kWp</td>
+        <td class="plot-cell">
+          <div class="plot-toggle ${isOn?'on':''}"
+               style="${isOn?`background:${btnColor};border-color:${btnColor}`:''}"
+               onclick="toggleGroup('${rowKey}')"
+               title="${isOn?'Remove from plot':'Add to plot'}">
+            ${isOn?'✓':'＋'}
+          </div>
+        </td>`;
       for(const b of battSizes){
         const d=data.find(x=>x.pv===pv&&x.batt===b&&x.trainS===tr&&x.testS===te);
         if(!d){html+=`<td>—</td>`;continue;}
-        const v=d[mk];
-        const bg=colorForValue(v,minV,maxV,m.higherBetter);
-        const tc=textColor(bg);
+        const t=(d[mk]-minV)/(maxV-minV||1);
+        const bg=heatColor(t,m.higherBetter);
+        const tc=textOnColor(bg);
         const sel=selectedId===d.id?' selected':'';
-        html+=`<td><span class="cell${sel}" style="background:${bg};color:${tc}" onclick="selectScenario('${d.id}')" title="Scenario ${d.id.toUpperCase()}">${m.fmt(v)}</span></td>`;
+        html+=`<td><div class="cell${sel}" style="background:${bg};color:${tc};${selectedId===d.id?'border:2px solid #1d1d1f':''}" onclick="selectRow('${d.id}')">
+          <span>${m.fmt(d[mk])}</span>
+          <span class="cell-id">${d.id.toUpperCase()}</span>
+        </div></td>`;
       }
-      html+='</tr>';
+      html+=`</tr>`;
     }
   }
-  html+='</tbody></table>';
+  html+=`</tbody></table>`;
   document.getElementById('grid-wrap').innerHTML=html;
+  document.getElementById('legend-range').textContent=`${m.fmt(minV)} – ${m.fmt(maxV)}`;
+  document.getElementById('chart-metric-label').textContent=m.label;
 
-  let lhtml='';
-  for(let i=0;i<9;i++){
-    const bg=colorForValue(minV+(i/8)*(maxV-minV),minV,maxV,m.higherBetter);
-    lhtml+=`<div class="legend-swatch" style="background:${bg}"></div>`;
-  }
-  lhtml+=` <span style="margin-left:4px">${m.fmt(minV)} → ${m.fmt(maxV)}</span>`;
-  document.getElementById('legend-bar').innerHTML=lhtml;
-  document.getElementById('legend-label').textContent=`(green = better performance)`;
-
-  if(selectedId){
-    const d=data.find(x=>x.id===selectedId);
-    if(d){
-      document.getElementById('detail-panel').className='detail-panel show';
-      document.getElementById('detail-title').textContent=`Scenario ${d.id.toUpperCase()} · ${d.pv} kWp · ${d.batt} kWh · ${seasonEmoji[d.trainS]} ${d.trainS} training → ${seasonEmoji[d.testS]} ${d.testS} testing`;
-      const kpis=[
-        {l:'Total load',v:d.load.toFixed(2),u:'kWh'},{l:'PV generated',v:d.pvGen.toFixed(2),u:'kWh'},
-        {l:'PV used',v:d.pvUsed.toFixed(2),u:'kWh'},{l:'Grid imports',v:d.gridImp.toFixed(2),u:'kWh'},
-        {l:'Cost',v:'€'+d.cost.toFixed(2),u:''},{l:'Self-consumption',v:d.sc.toFixed(1),u:'%'},{l:'Self-sufficiency',v:d.ss.toFixed(1),u:'%'},
-      ];
-      document.getElementById('detail-kpis').innerHTML=kpis.map(k=>`<div class="kpi"><div class="kpi-label">${k.l}</div><div class="kpi-val">${k.v}<span class="kpi-unit">${k.u}</span></div></div>`).join('');
-      document.getElementById('detail-note').textContent=d.trainS!==d.testS?'⚠️ Season mismatch: agent trained in one climate, tested in another.':'✓ Matched training and testing seasons.';
-    }
-  } else {
-    document.getElementById('detail-panel').className='detail-panel';
-  }
+  renderDetail();
+  renderChart();
 }
 
-window.selectScenario=function(id){
-  selectedId = selectedId===id ? null : id;
-
-  if(!compareIds.includes(id)){
-    compareIds.push(id);
-  }else{
-    compareIds = compareIds.filter(x=>x!==id);
-  }
-
+window.toggleGroup=function(key){
+  if(plottedGroupKeys.has(key)) plottedGroupKeys.delete(key);
+  else plottedGroupKeys.add(key);
   render();
-  renderChart();
 };
+
+window.selectRow=function(id){
+  selectedId=selectedId===id?null:id;
+  render();
+};
+
+window.clearPlot=function(){
+  plottedGroupKeys.clear(); selectedId=null; render();
+};
+
+function renderDetail(){
+  const panel=document.getElementById('detail-panel');
+  if(!selectedId){panel.classList.remove('show');return;}
+  const d=data.find(x=>x.id===selectedId);
+  if(!d)return;
+  panel.classList.add('show');
+  document.getElementById('detail-badges').innerHTML=`
+    <span class="season-badge" style="background:${sColor[d.trainS]};color:${sTColor[d.trainS]}">${sEmoji[d.trainS]} Train: ${d.trainS}</span>
+    <span style="color:#aeaeb2;font-size:12px">→</span>
+    <span class="season-badge" style="background:${sColor[d.testS]};color:${sTColor[d.testS]}">${sEmoji[d.testS]} Test: ${d.testS}</span>
+    <span class="season-badge ${d.trainS===d.testS?'match-badge':'mismatch-badge'}">${d.trainS===d.testS?'✓ Matched':'⚠ Mismatch'}</span>`;
+  const kpis=[
+    {l:'Self-sufficiency',v:d.ss.toFixed(1),u:'%'},{l:'Self-consumption',v:d.sc.toFixed(1),u:'%'},
+    {l:'Cost',v:'€'+d.cost.toFixed(2),u:''},{l:'Grid imports',v:d.gridImp.toFixed(2),u:'kWh'},
+    {l:'PV used',v:d.pvUsed.toFixed(2),u:'kWh'},{l:'PV generated',v:d.pvGen.toFixed(2),u:'kWh'},
+    {l:'Total load',v:d.load.toFixed(2),u:'kWh'},
+  ];
+  document.getElementById('detail-kpis').innerHTML=kpis.map(k=>`
+    <div class="kpi"><div class="kpi-label">${k.l}</div>
+    <div class="kpi-val">${k.v}<span class="kpi-unit">${k.u}</span></div></div>`).join('');
+}
+
+function renderChart(){
+  const empty=document.getElementById('compare-empty');
+  const content=document.getElementById('compare-content');
+  if(!plottedGroupKeys.size){empty.style.display='block';content.style.display='none';if(chart){chart.destroy();chart=null;}return;}
+  empty.style.display='none';content.style.display='block';
+
+  const m=metrics[activeMet], mk=m.key;
+  const battLabels=[5,15,20];
+
+  const datasets=[...plottedGroupKeys].map(key=>{
+    const [pv,tr,te]=key.split(':');
+    const color=groupColor(key);
+    const points=battLabels.map(b=>{
+      const found=data.find(d=>d.pv==pv&&d.batt===b&&d.trainS===tr&&d.testS===te);
+      return found?found[mk]:null;
+    });
+    return{label:groupLabel(key),data:points,borderColor:color,backgroundColor:color+'22',
+      pointBackgroundColor:color,pointRadius:6,pointHoverRadius:9,borderWidth:2.5,tension:0.3,spanGaps:false};
+  });
+
+  // chips — one per plotted group
+  document.getElementById('compare-chips').innerHTML=[...plottedGroupKeys].map(key=>{
+    const color=groupColor(key);
+    return`<div class="compare-chip" style="background:${color}18;border-color:${color};color:${color}" onclick="toggleGroup('${key}')" title="Click to remove">
+      ${groupLabel(key)} <span style="font-size:13px;opacity:.7">×</span>
+    </div>`;
+  }).join('');
+
+  const ctx=document.getElementById('compareChart').getContext('2d');
+  if(chart)chart.destroy();
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{labels:battLabels.map(b=>`${b} kWh`),datasets},
+    options:{
+      responsive:true,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{family:'DM Sans',size:11},color:'#6e6e73',boxWidth:12,padding:16}},
+        tooltip:{
+          callbacks:{label:item=>` ${item.dataset.label}: ${m.fmt(item.raw)}`},
+          backgroundColor:'rgba(255,255,255,0.97)',borderColor:'rgba(0,0,0,0.07)',borderWidth:1,
+          titleColor:'#1d1d1f',bodyColor:'#6e6e73',padding:10,cornerRadius:10,
+        }
+      },
+      scales:{
+        x:{title:{display:true,text:'Battery capacity',font:{family:'DM Sans',size:11},color:'#aeaeb2'},
+          grid:{display:false},ticks:{font:{family:'DM Sans',size:12},color:'#6e6e73'}},
+        y:{title:{display:true,text:m.label+' ('+m.unit+')',font:{family:'DM Sans',size:11},color:'#aeaeb2'},
+          grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:'DM Sans',size:11},color:'#6e6e73',callback:v=>m.fmt(v)}}
+      }
+    }
+  });
+}
 
 document.querySelectorAll('.chip[data-filter]').forEach(btn=>{
   btn.addEventListener('click',()=>{
     const f=btn.dataset.filter;
     document.querySelectorAll(`.chip[data-filter="${f}"]`).forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    if(f==='train') filterTrain=btn.dataset.val;
-    else if(f==='test') filterTest=btn.dataset.val;
-    else if(f==='batt') filterBatt=btn.dataset.val;
-    else if(f==='pv') filterPv=btn.dataset.val;
+    if(f==='train')filterTrain=btn.dataset.val;
+    else if(f==='test')filterTest=btn.dataset.val;
+    else if(f==='batt')filterBatt=btn.dataset.val;
+    else if(f==='pv')filterPv=btn.dataset.val;
     selectedId=null;render();
   });
 });
@@ -270,48 +442,12 @@ document.querySelectorAll('.mtab').forEach(btn=>{
     document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     activeMet=btn.dataset.metric;
-    selectedId=null;render();
+    render();
   });
 });
-
-function renderChart(){
-
-  const scenarios=data.filter(d=>compareIds.includes(d.id));
-  if(!scenarios.length) return;
-
-  const labels=scenarios.map(d =>
-    `${d.pv}kWp / ${d.batt}kWh / ${d.trainS}→${d.testS}`
-  );
-
-  const values=scenarios.map(d => d[metricKey[activeMet]]);
-
-  const ctx=document.getElementById('compareChart').getContext('2d');
-
-  if(chart) chart.destroy();
-
-  chart=new Chart(ctx,{
-    type:'bar',
-    data:{
-      labels:labels,
-      datasets:[{
-        label:metrics[activeMet].label,
-        data:values
-      }]
-    },
-    options:{
-      responsive:true,
-      plugins:{legend:{display:false}},
-      scales:{y:{beginAtZero:true}}
-    }
-  });
-}
-
-function clearComparison(){
-  compareIds=[];
-  if(chart) chart.destroy();
-}
 
 render();
 </script>
 </body>
 </html>
+
