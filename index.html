@@ -111,9 +111,6 @@ td.plot-cell { vertical-align:middle; }
 #mean-fab { animation: wiggle 3.5s ease-in-out 1s infinite; }
 #mean-fab:hover { animation: none; transform: translateY(-2px); }
  
-#fab { animation: wiggle 3.5s ease-in-out 2.2s infinite; }
-#fab:hover { animation: none; transform: translateY(-2px); }
- 
 /* shared backdrop for both panels */
 .panel-backdrop {
   position: fixed; inset: 0; z-index: 250;
@@ -159,10 +156,8 @@ td.plot-cell { vertical-align:middle; }
  
 /* draggable cursor on the fabs */
 #mean-fab { cursor: pointer; }
-#fab { cursor: pointer; }
 .dragging { animation: none !important; transition: none !important; cursor: grabbing !important; }
 #mean-float.dragging #mean-fab { animation: none; }
-#fab.dragging { animation: none; }
 .mean-view-toggle { display:flex; gap:3px; background:var(--bg); border-radius:8px; padding:3px; }
 .mvtab { font-size:13px; font-weight:500; padding:5px 12px; border-radius:6px; border:none; background:transparent; color:var(--text-sec); cursor:pointer; transition:all .15s; }
 .mvtab.active { background:white; color:var(--text-pri); box-shadow:0 1px 3px rgba(0,0,0,0.1); }
@@ -185,25 +180,85 @@ td.plot-cell { vertical-align:middle; }
 #mean-panel.chart-mode #mean-matrix { display:none; }
 #mean-panel.chart-mode #mean-chart-wrap { display:block; }
  
+/* ── Updated FAB with mini chart ── */
 #fab {
-  position: fixed; bottom: 32px; right: 32px; z-index: 200;
-  display: flex; align-items: center; gap: 8px;
-  padding: 14px 22px; border-radius: 50px;
-  background: var(--text-pri); color: white;
-  font-size: 15px; font-weight: 600; cursor: pointer;
+  position: fixed; 
+  bottom: 32px; 
+  right: 32px; 
+  z-index: 200;
+  display: flex; 
+  flex-direction: column;
+  align-items: center; 
+  gap: 0;
+  background: var(--text-pri); 
+  color: white;
+  border-radius: 50px;
+  cursor: pointer;
   box-shadow: 0 8px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
-  transition: box-shadow .2s ease; user-select: none;
+  transition: all .3s cubic-bezier(.32,.72,0,1);
+  user-select: none;
+  overflow: hidden;
+}
+
+#fab.has-data {
+  border-radius: 20px;
+  padding: 0;
+}
+
+#fab.empty {
+  padding: 14px 22px;
+  border-radius: 50px;
+  animation: wiggle 3.5s ease-in-out 2.2s infinite;
+}
+
+#fab.empty:hover {
+  animation: none;
+  transform: translateY(-2px);
+}
+
+#fab-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px;
+  width: 100%;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
   letter-spacing: -0.01em;
+  background: var(--text-pri);
+  transition: background .2s ease;
 }
-#fab:active { transform: translateY(0); }
+
+#fab.has-data #fab-header:hover {
+  background: rgba(58,58,60,0.9);
+}
+
+#fab-mini-chart {
+  display: none;
+  width: 300px;
+  height: 180px;
+  padding: 12px 16px 16px;
+  background: rgba(250,250,252,0.97);
+  backdrop-filter: blur(10px);
+}
+
+#fab.has-data #fab-mini-chart {
+  display: block;
+}
+
 .fab-count {
-  background: var(--accent); color: white;
-  font-size: 10px; font-weight: 700;
-  width: 18px; height: 18px; border-radius: 50%;
-  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); 
+  color: white;
+  font-size: 10px; 
+  font-weight: 700;
+  width: 18px; 
+  height: 18px; 
+  border-radius: 50%;
+  display: inline-flex; 
+  align-items: center; 
+  justify-content: center;
 }
- 
-#plot-overlay { display: none; } /* handled by shared backdrop now */
  
 #plot-modal {
   background: rgba(250,250,252,0.97);
@@ -211,16 +266,21 @@ td.plot-cell { vertical-align:middle; }
   border: 1px solid var(--border);
   border-radius: 20px;
   width: 70vw; max-width: 70vw;
-  max-height: 80vh; overflow-y: auto;
+  height: 85vh;
+  max-height: 85vh;
+  overflow: hidden;
   padding: 22px 24px 24px;
   box-shadow: 0 24px 60px rgba(0,0,0,0.18), 0 4px 16px rgba(0,0,0,0.08);
   animation: modalIn .22s cubic-bezier(.32,.72,0,1);
+  display: flex;
+  flex-direction: column;
 }
 @keyframes modalIn { from{transform:scale(0.94) translateY(10px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
  
 #plot-modal-header {
   display: flex; align-items: flex-start; justify-content: space-between;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 #plot-modal-title { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; color: var(--text-pri); }
 #plot-modal-sub { font-size: 14px; color: var(--text-sec); margin-top: 3px; }
@@ -234,9 +294,10 @@ td.plot-cell { vertical-align:middle; }
 }
 #plot-close:hover { background: rgba(0,0,0,0.12); color: var(--text-pri); }
  
-#plot-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; min-height: 0; }
+#plot-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; min-height: 0; flex-shrink: 0; }
 #plot-empty { text-align: center; padding: 40px; color: var(--text-ter); font-size: 13px; }
-#plot-chart-wrap { position: relative; }
+#plot-chart-wrap { position: relative; flex: 1; min-height: 0; }
+#plot-chart-wrap canvas { height: 100% !important; width: 100% !important; }
  
 .btn-clear { font-size:11px; font-weight:500; padding:6px 14px; border-radius:8px; border:1px solid var(--border); background:white; color:var(--text-sec); cursor:pointer; transition:all .15s; }
 .btn-clear:hover { border-color:var(--bad); color:var(--bad); }
@@ -386,11 +447,16 @@ td.plot-cell { vertical-align:middle; }
   </div>
 </div>
  
-<!-- Floating plot button -->
-<div id="fab" onclick="openPlot()" title="Open comparison plot">
-  <span id="fab-icon">📈</span>
-  <span id="fab-label">Plot</span>
-  <span id="fab-count" class="fab-count" style="display:none">0</span>
+<!-- Floating plot button with mini chart -->
+<div id="fab" class="empty" onclick="openPlot()">
+  <div id="fab-header">
+    <span id="fab-icon">📈</span>
+    <span id="fab-label">Plot</span>
+    <span id="fab-count" class="fab-count" style="display:none">0</span>
+  </div>
+  <div id="fab-mini-chart">
+    <canvas id="miniChart"></canvas>
+  </div>
 </div>
  
 <!-- Plot centered backdrop -->
@@ -409,7 +475,7 @@ td.plot-cell { vertical-align:middle; }
     <div id="plot-chips"></div>
     <div id="plot-empty">Add rows using the Plot column in the table</div>
     <div id="plot-chart-wrap" style="display:none">
-      <canvas id="compareChart" height="45"></canvas>
+      <canvas id="compareChart"></canvas>
     </div>
   </div>
 </div>
@@ -483,7 +549,7 @@ function groupColor(key) {
 }
  
 let filterTrain='all', filterTest='all', filterBatt='all', filterPv='all';
-let activeMet='selfSufficiency', selectedId=null, chart=null;
+let activeMet='selfSufficiency', selectedId=null, chart=null, miniChart=null;
  
 function heatColor(t, higherBetter) {
   if (!higherBetter) t=1-t;
@@ -611,6 +677,7 @@ function renderMeanChart() {
           ticks: { font: { family: 'DM Sans', size: 11 }, color: '#8e8e93' }
         },
         y: {
+          beginAtZero: true,
           title: { display: true, text: `${m.label} (${m.unit})`, font: { family: 'DM Sans', size: 10 }, color: '#c7c7cc' },
           grid: { color: 'rgba(0,0,0,0.04)' },
           ticks: { font: { family: 'DM Sans', size: 10 }, color: '#8e8e93', callback: v => m.fmt(v) }
@@ -692,6 +759,7 @@ window.toggleGroup=function(key){
   if(plottedGroupKeys.has(key)) plottedGroupKeys.delete(key);
   else plottedGroupKeys.add(key);
   updateFab();
+  renderMiniChart();
   renderChart(); // always keep chart in sync
   render();
 };
@@ -702,7 +770,11 @@ window.selectRow=function(id){
 };
  
 window.clearPlot=function(){
-  plottedGroupKeys.clear(); selectedId=null; render();
+  plottedGroupKeys.clear(); 
+  selectedId=null; 
+  updateFab();
+  renderMiniChart();
+  render();
 };
  
 function renderDetail(){
@@ -731,12 +803,92 @@ function updateFab() {
   const n = plottedGroupKeys.size;
   const fab = document.getElementById('fab');
   const count = document.getElementById('fab-count');
+  
   if (n > 0) {
+    fab.classList.remove('empty');
+    fab.classList.add('has-data');
     count.textContent = n;
     count.style.display = 'inline-flex';
   } else {
+    fab.classList.add('empty');
+    fab.classList.remove('has-data');
     count.style.display = 'none';
   }
+}
+
+function renderMiniChart() {
+  const m = metrics[activeMet], mk = m.key;
+  
+  if (!plottedGroupKeys.size) {
+    if (miniChart) {
+      miniChart.destroy();
+      miniChart = null;
+    }
+    return;
+  }
+  
+  const battLabels = [5, 15, 20];
+  const datasets = [...plottedGroupKeys].map(key => {
+    const [pv, tr, te] = key.split(':');
+    const color = groupColor(key);
+    const points = battLabels.map(b => {
+      const found = data.find(d => d.pv == pv && d.batt === b && d.trainS === tr && d.testS === te);
+      return found ? found[mk] : null;
+    });
+    return {
+      label: groupLabel(key),
+      data: points,
+      borderColor: color,
+      backgroundColor: color + '22',
+      pointBackgroundColor: color,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      borderWidth: 2,
+      tension: 0.3,
+      spanGaps: false
+    };
+  });
+  
+  const ctx = document.getElementById('miniChart').getContext('2d');
+  if (miniChart) miniChart.destroy();
+  
+  miniChart = new Chart(ctx, {
+    type: 'line',
+    data: { 
+      labels: battLabels.map(b => `${b} kWh`), 
+      datasets 
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
+      },
+      scales: {
+        x: {
+          display: true,
+          grid: { display: false },
+          ticks: { 
+            font: { family: 'DM Sans', size: 9 }, 
+            color: '#8e8e93' 
+          }
+        },
+        y: {
+          beginAtZero: true,
+          display: true,
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: { 
+            font: { family: 'DM Sans', size: 9 }, 
+            color: '#8e8e93',
+            maxTicksLimit: 4
+          }
+        }
+      }
+    }
+  });
 }
  
 window.openPlot = function() {
@@ -794,6 +946,7 @@ function renderChart() {
     data: { labels: battLabels.map(b=>`${b} kWh`), datasets },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       interaction: { mode:'index', intersect:false },
       plugins: {
         legend: { display:true, position:'top', labels:{ font:{family:'DM Sans',size:11}, color:'#8e8e93', boxWidth:12, padding:16 } },
@@ -806,7 +959,7 @@ function renderChart() {
       scales: {
         x: { title:{display:true,text:'Battery capacity',font:{family:'DM Sans',size:11},color:'#c7c7cc'},
           grid:{display:false}, ticks:{font:{family:'DM Sans',size:12},color:'#8e8e93'} },
-        y: { title:{display:true,text:`${m.label} (${m.unit})`,font:{family:'DM Sans',size:11},color:'#c7c7cc'},
+        y: { beginAtZero: true, title:{display:true,text:`${m.label} (${m.unit})`,font:{family:'DM Sans',size:11},color:'#c7c7cc'},
           grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{family:'DM Sans',size:11},color:'#8e8e93',callback:v=>m.fmt(v)} }
       }
     }
@@ -830,6 +983,7 @@ document.querySelectorAll('.mtab').forEach(btn=>{
     document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     activeMet=btn.dataset.metric;
+    renderMiniChart();
     render();
   });
 });
@@ -885,4 +1039,3 @@ render();
 </script>
 </body>
 </html>
-
