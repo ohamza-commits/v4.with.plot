@@ -303,6 +303,9 @@ td.plot-cell { vertical-align:middle; }
 .btn-clear:hover { border-color:var(--bad); color:var(--bad); }
 .compare-chip { font-size:11px; padding:4px 10px; border-radius:20px; display:flex; align-items:center; gap:5px; cursor:pointer; border:1.5px solid; transition:all .15s; }
 .compare-chip:hover { opacity:.75; }
+.plot-mtab { font-size:12px; font-weight:500; padding:6px 12px; border-radius:6px; border:1px solid var(--border); background:white; color:var(--text-sec); cursor:pointer; transition:all .15s ease; }
+.plot-mtab:hover { background:rgba(0,0,0,0.04); }
+.plot-mtab.active { background:var(--text-pri); color:white; border-color:var(--text-pri); box-shadow:0 2px 6px rgba(0,0,0,0.15); }
 </style>
 </head>
 <body>
@@ -463,9 +466,16 @@ td.plot-cell { vertical-align:middle; }
 <div class="panel-backdrop" id="plot-backdrop" onclick="handleBackdropClick(event,'plot-backdrop')">
   <div id="plot-modal">
     <div id="plot-modal-header">
-      <div>
+      <div style="flex: 1;">
         <div id="plot-modal-title">Comparison plot</div>
         <div id="plot-modal-sub">Battery size vs <span id="chart-metric-label">Self-sufficiency</span></div>
+        <div style="display:flex; gap:4px; margin-top:12px; flex-wrap:wrap;">
+          <button class="plot-mtab active" data-plot-metric="selfSufficiency">Self-sufficiency %</button>
+          <button class="plot-mtab" data-plot-metric="selfConsumption">Self-consumption %</button>
+          <button class="plot-mtab" data-plot-metric="cost">Cost (€)</button>
+          <button class="plot-mtab" data-plot-metric="gridImports">Grid imports (kWh)</button>
+          <button class="plot-mtab" data-plot-metric="pvUsed">PV used (kWh)</button>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <button class="btn-clear" onclick="clearPlot()">Clear all</button>
@@ -892,6 +902,10 @@ function renderMiniChart() {
 }
  
 window.openPlot = function() {
+  // Sync the active metric tab in the plot modal
+  document.querySelectorAll('.plot-mtab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.plotMetric === activeMet);
+  });
   document.getElementById('plot-backdrop').classList.add('open');
   renderChart();
 };
@@ -985,6 +999,17 @@ document.querySelectorAll('.mtab').forEach(btn=>{
     activeMet=btn.dataset.metric;
     renderMiniChart();
     render();
+  });
+});
+
+// Plot modal metric tabs
+document.querySelectorAll('.plot-mtab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.plot-mtab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeMet=btn.dataset.plotMetric;
+    renderMiniChart();
+    renderChart();
   });
 });
  
